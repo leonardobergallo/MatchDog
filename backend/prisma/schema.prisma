@@ -1,0 +1,123 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Usuario {
+  id        Int      @id @default(autoincrement())
+  nombre    String   @db.VarChar(100)
+  email     String   @unique @db.VarChar(100)
+  contraseña String  @db.VarChar(255)
+  foto_url  String?
+  ubicacion String?  @db.VarChar(255)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
+
+  // Relaciones
+  mascotas           Mascota[]
+  eventosOrganizados Evento[] @relation("OrganizadorEvento")
+  asistencias        AsistenciaEvento[]
+  mensajesEnviados   MensajeEvento[]
+
+  @@map("usuarios")
+}
+
+model Mascota {
+  id           Int      @id @default(autoincrement())
+  idUsuario    Int      @map("id_usuario")
+  nombre       String   @db.VarChar(100)
+  especie      String   @db.VarChar(50)
+  raza         String?  @db.VarChar(50)
+  edad         Int?
+  temperamento String?  @db.VarChar(50)
+  foto_url     String?
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @default(now()) @updatedAt @map("updated_at")
+
+  // Relaciones
+  usuario      Usuario            @relation(fields: [idUsuario], references: [id], onDelete: Cascade)
+  asistencias  AsistenciaEvento[]
+  coincidenciasComoMascota1 CoincidenciaMascota[] @relation("Mascota1")
+  coincidenciasComoMascota2 CoincidenciaMascota[] @relation("Mascota2")
+
+  @@map("mascotas")
+}
+
+model Evento {
+  id              Int      @id @default(autoincrement())
+  idOrganizador   Int      @map("id_organizador")
+  titulo          String   @db.VarChar(100)
+  descripcion     String?
+  tipo            String   @db.VarChar(50)
+  fechaHora       DateTime @map("fecha_hora")
+  nombreUbicacion String   @map("nombre_ubicacion") @db.VarChar(255)
+  latitud         Decimal  @db.Decimal(10, 8)
+  longitud        Decimal  @db.Decimal(11, 8)
+  reglas          String?
+  imagen_url      String?
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @default(now()) @updatedAt @map("updated_at")
+
+  // Relaciones
+  organizador     Usuario            @relation("OrganizadorEvento", fields: [idOrganizador], references: [id], onDelete: Cascade)
+  asistencias     AsistenciaEvento[]
+  mensajes        MensajeEvento[]
+
+  @@map("eventos")
+}
+
+model AsistenciaEvento {
+  id        Int      @id @default(autoincrement())
+  idEvento  Int      @map("id_evento")
+  idUsuario Int      @map("id_usuario")
+  idMascota Int      @map("id_mascota")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // Relaciones
+  evento    Evento   @relation(fields: [idEvento], references: [id], onDelete: Cascade)
+  usuario   Usuario  @relation(fields: [idUsuario], references: [id], onDelete: Cascade)
+  mascota   Mascota  @relation(fields: [idMascota], references: [id], onDelete: Cascade)
+
+  @@unique([idEvento, idUsuario])
+  @@map("asistencias_eventos")
+}
+
+model MensajeEvento {
+  id          Int      @id @default(autoincrement())
+  idEvento    Int      @map("id_evento")
+  idRemitente Int      @map("id_remitente")
+  mensaje     String
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  // Relaciones
+  evento      Evento   @relation(fields: [idEvento], references: [id], onDelete: Cascade)
+  remitente   Usuario  @relation(fields: [idRemitente], references: [id], onDelete: Cascade)
+
+  @@map("mensajes_eventos")
+}
+
+model CoincidenciaMascota {
+  id            Int      @id @default(autoincrement())
+  idMascota1    Int      @map("id_mascota_1")
+  idMascota2    Int      @map("id_mascota_2")
+  estado        String   @default("pendiente") @db.VarChar(20) // pendiente, aceptada, rechazada
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @default(now()) @updatedAt @map("updated_at")
+
+  // Relaciones
+  mascota1      Mascota  @relation("Mascota1", fields: [idMascota1], references: [id], onDelete: Cascade)
+  mascota2      Mascota  @relation("Mascota2", fields: [idMascota2], references: [id], onDelete: Cascade)
+
+  @@unique([idMascota1, idMascota2])
+  @@map("coincidencias_mascotas")
+}

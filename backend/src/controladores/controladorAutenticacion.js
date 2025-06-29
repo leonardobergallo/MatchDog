@@ -1,13 +1,17 @@
 const jwt = require('jsonwebtoken');
-const Usuario = require('../modelos/Usuario');
+const bcrypt = require('bcryptjs');
+// const Usuario = require('../modelos/Usuario'); // Eliminado: ya no se usa
+const prisma = require('../configuracion/prisma');
 
 class ControladorAutenticacion {
   static async registro(req, res) {
     try {
       const { nombre, email, contraseña, foto_url, ubicacion } = req.body;
 
-      // Verificar si el usuario ya existe
-      const usuarioExistente = await Usuario.findByEmail(email);
+      // Verificar si el usuario ya existe usando Prisma
+      const usuarioExistente = await prisma.usuario.findUnique({
+        where: { email }
+      });
       if (usuarioExistente) {
         return res.status(400).json({
           error: true,
@@ -15,13 +19,18 @@ class ControladorAutenticacion {
         });
       }
 
-      // Crear nuevo usuario
-      const usuario = await Usuario.create({
-        nombre,
-        email,
-        contraseña,
-        foto_url,
-        ubicacion
+      // Hashear la contraseña
+      const contraseñaHasheada = await bcrypt.hash(contraseña, 10);
+
+      // Crear nuevo usuario usando Prisma
+      const usuario = await prisma.usuario.create({
+        data: {
+          nombre,
+          email,
+          contraseña: contraseñaHasheada,
+          foto_url,
+          ubicacion
+        }
       });
 
       // Generar token
@@ -31,11 +40,14 @@ class ControladorAutenticacion {
         { expiresIn: '24h' }
       );
 
+      // No enviar la contraseña en la respuesta
+      const { contraseña: _, ...usuarioSinContraseña } = usuario;
+
       res.status(201).json({
         error: false,
         mensaje: 'Usuario registrado exitosamente',
         datos: {
-          usuario,
+          usuario: usuarioSinContraseña,
           token
         }
       });
@@ -52,8 +64,10 @@ class ControladorAutenticacion {
     try {
       const { email, contraseña } = req.body;
 
-      // Buscar usuario
-      const usuario = await Usuario.findByEmail(email);
+      // Buscar usuario usando Prisma
+      const usuario = await prisma.usuario.findUnique({
+        where: { email }
+      });
       if (!usuario) {
         return res.status(401).json({
           error: true,
@@ -61,8 +75,8 @@ class ControladorAutenticacion {
         });
       }
 
-      // Verificar contraseña
-      const contraseñaValida = await Usuario.verifyPassword(usuario, contraseña);
+      // Verificar contraseña usando bcrypt
+      const contraseñaValida = await bcrypt.compare(contraseña, usuario.contraseña);
       if (!contraseñaValida) {
         return res.status(401).json({
           error: true,
@@ -77,11 +91,14 @@ class ControladorAutenticacion {
         { expiresIn: '24h' }
       );
 
+      // No enviar la contraseña en la respuesta
+      const { contraseña: _, ...usuarioSinContraseña } = usuario;
+
       res.json({
         error: false,
         mensaje: 'Inicio de sesión exitoso',
         datos: {
-          usuario,
+          usuario: usuarioSinContraseña,
           token
         }
       });
@@ -96,7 +113,9 @@ class ControladorAutenticacion {
 
   static async obtenerPerfil(req, res) {
     try {
-      const usuario = await Usuario.findById(req.usuario.id);
+      const usuario = await prisma.usuario.findUnique({
+        where: { id: req.usuario.id }
+      });
       if (!usuario) {
         return res.status(404).json({
           error: true,
@@ -104,9 +123,12 @@ class ControladorAutenticacion {
         });
       }
 
+      // No enviar la contraseña en la respuesta
+      const { contraseña: _, ...usuarioSinContraseña } = usuario;
+
       res.json({
         error: false,
-        datos: usuario
+        datos: usuarioSinContraseña
       });
     } catch (error) {
       console.error('Error al obtener perfil:', error);

@@ -64,7 +64,7 @@ io.on('connection', (socket) => {
   });
 });
 
-const PUERTO = process.env.PORT || 3000;
+const PUERTO = process.env.PORT || 5000;
 servidor.listen(PUERTO, () => {
   console.log(`🚀 Servidor ejecutándose en http://localhost:${PUERTO}`);
 }); 

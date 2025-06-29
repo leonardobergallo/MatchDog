@@ -6,9 +6,15 @@
   "scripts": {
     "start": "node src/index.js",
     "dev": "nodemon src/index.js",
-    "test": "jest"
+    "test": "jest",
+    "prisma:generate": "prisma generate",
+    "prisma:push": "prisma db push",
+    "prisma:migrate": "prisma migrate dev",
+    "prisma:studio": "prisma studio",
+    "prisma:reset": "prisma migrate reset"
   },
   "dependencies": {
+    "@prisma/client": "^6.10.1",
     "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",
     "dotenv": "^16.5.0",
@@ -17,6 +23,7 @@
     "joi": "^17.13.3",
     "jsonwebtoken": "^9.0.2",
     "pg": "^8.16.0",
+    "prisma": "^6.10.1",
     "react-native-maps": "^1.23.8",
     "socket.io": "^4.8.1"
   },
